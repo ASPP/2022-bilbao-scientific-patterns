@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 
 class Walker:
@@ -85,6 +86,26 @@ class Walker:
         next_step_probability = next_step_map * self.context_map
         next_step_probability /= next_step_probability.sum()
         return next_step_probability
+
+    def to_json(self, filename):
+        stem = filename.split(sep='.')[0]
+        context_map_filename =  f'{stem}_context_map.npy'
+        with open(filename, 'w') as f:
+            json.dump({'sigma_i': self.sigma_i,
+                       'sigma_j': self.sigma_j,
+                       'size': self.size,
+                       'context_map_path': context_map_filename}, f)
+        np.save(context_map_filename, self.context_map)
+        return filename
+
+    @classmethod
+    def from_json(cls, filename):
+        with open(filename, 'r') as f:
+            walker_dict = json.load(f)
+        print(walker_dict)
+        with open(walker_dict['context_map_path'], 'rb') as f:
+            context_map = np.load(walker_dict['context_map_path'])
+        return  cls(walker_dict['sigma_i'], walker_dict['sigma_j'], walker_dict['size'], context_map)
 
 
 def plot_trajectory(trajectory, context_map):
