@@ -2,38 +2,54 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def sample_next_step(current_i, current_j, sigma_i, sigma_j, context_map,
-                     random_state=np.random):
-    """ Sample a new position for the walker. """
-
-    # Combine the next-step proposal with the context map to get a next-step
-    # probability map
-    size = context_map.shape[0]
-    next_step_map = next_step_proposal(current_i, current_j, sigma_i, sigma_j,
-                                       size)
-    next_step_probability = compute_next_step_probability(next_step_map,
-                                                          context_map)
-
-    # Draw a new position from the next-step probability map
-    r = random_state.rand()
-    cumulative_map = np.cumsum(next_step_probability)
-    cumulative_map = cumulative_map.reshape(next_step_probability.shape)
-    i_next, j_next = np.argwhere(cumulative_map >= r)[0]
-
-    return i_next, j_next
+class Walker:
+    def __init__(self, sigma_i: float, sigma_j: float, size: int, map_type: str, random_seed: int = None):
+        self.sigma_i = sigma_i
+        self.sigma_j = sigma_j
+        self.size = size
+        self.map_type = map_type
+        self.context_map = create_context_map(size, map_type)
+        self.random_state = np.random.RandomState(random_seed)
 
 
-def next_step_proposal(current_i, current_j, sigma_i, sigma_j, size):
-    """ Create the 2D proposal map for the next step of the walker. """
-    # 2D Gaussian distribution , centered at current position,
-    # and with different standard deviations for i and j
-    grid_ii, grid_jj = np.mgrid[0:size, 0:size]
-    rad = (
-        (((grid_ii - current_i) ** 2) / (sigma_i ** 2))
-        + (((grid_jj - current_j) ** 2) / (sigma_j ** 2))
-    )
-    p_next_step = np.exp(-(rad / 2.0)) / (2.0 * np.pi * sigma_i * sigma_j)
-    return p_next_step / p_next_step.sum()
+    def sample_next_step(self, current_i: int, current_j: int):
+        """ Sample a new position for the walker. """
+        # Combine the next-step proposal with the context map to get a next-step
+        # probability map
+        sigma_i = self.sigma_i
+        sigma_j = self.sigma_j
+        context_map = self.context_map
+        random_state = self.random_state
+
+        size = context_map.shape[0]
+        next_step_map = self.next_step_proposal(current_i, current_j)
+        next_step_probability = compute_next_step_probability(next_step_map,
+                                                              context_map)
+
+        # Draw a new position from the next-step probability map
+        r = random_state.rand()
+        cumulative_map = np.cumsum(next_step_probability)
+        cumulative_map = cumulative_map.reshape(next_step_probability.shape)
+        i_next, j_next = np.argwhere(cumulative_map >= r)[0]
+
+        return i_next, j_next
+
+
+    def next_step_proposal(self, current_i: int, current_j: int):
+        """ Create the 2D proposal map for the next step of the walker. """
+        # 2D Gaussian distribution , centered at current position,
+        # and with different standard deviations for i and j
+        sigma_i = self.sigma_i
+        sigma_j = self.sigma_j
+        size = self.size
+
+        grid_ii, grid_jj = np.mgrid[0:size, 0:size]
+        rad = (
+            (((grid_ii - current_i) ** 2) / (sigma_i ** 2))
+            + (((grid_jj - current_j) ** 2) / (sigma_j ** 2))
+        )
+        p_next_step = np.exp(-(rad / 2.0)) / (2.0 * np.pi * sigma_i * sigma_j)
+        return p_next_step / p_next_step.sum()
 
 
 def compute_next_step_probability(next_step_map, context_map):
